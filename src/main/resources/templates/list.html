@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- 引入资源文件-->
+    <link type="text/css" href="/resources/layui/css/layui.css" rel="stylesheet">
+    <script type="text/javascript" src="/resources/layui/layui.js"></script>
+    <script src="/resources/js/jquery-1.8.0.min.js"></script>
+</head>
+<body>
+<h2 align="center">记账管理</h2>
+<hr width="100%">
+<div style="width: 100%;height: 100%">
+<form id="dataForm">
+<div style="text-align: center;margin: 20px">
+    类型:<select name="typeid">
+        <option value="">不限</option>
+        <option th:each="type:${types}" th:value="${type.id}" th:text="${type.name}"></option>
+    </select>
+    时间:<input name="startTime" type="text" class="billtime">
+    到<input name="endTime" type="text" class="billtime">
+    <input type="button" id="doSearch" value="搜索">
+    <input type="button" id="addBill" value="记账">
+    <input type="submit" value="清空时间区间">
+</div>
+</form>
+    <hr width="100%">
+    <div>
+        <table cellpadding="5" cellspacing="0" border="1" width="80%" align="center">
+            <tr style="background-color: chocolate">
+                <th align="center" width="120px">标题</th>
+                <th align="center">记账时间</th>
+                <th align="center">类别</th>
+                <th align="center">金额</th>
+                <th align="center">说明</th>
+            </tr>
+            <tr th:each="bills:${bill}" style="text-align: center">
+                <td th:text="${bills.title}">标题</td>
+                <td th:text="${bills.billtime}">记账时间</td>
+                <td th:text="${map.get(bills.typeid)}">类别</td>
+                <td th:text="${bills.price}">金额</td>
+                <td th:text="${bills.explain}">说明</td>
+            </tr>
+        </table>
+    </div>
+</div>
+<!--添加账单开始-->
+<div id="billTable" style="display: none">
+    <h2 align="center">添加账目</h2>
+    <hr width="100%">
+    <form class="layui-form"  id="billForm">
+    <div class="layui-form-item">
+        <label class="layui-form-label">类型</label>
+            <div class="layui-input-block">
+                <input type="radio" name="type" value="支出" title="支出">
+                <input type="radio" name="type" value="收入" title="收入">
+                <input type="radio" name="type" value="转账" title="转账">
+                <input type="radio" name="type" value="借出" title="借出">
+                <input type="radio" name="type" value="借入" title="借入">
+                <input type="radio" name="type" value="还入" title="还入">
+                <input type="radio" name="type" value="还出" title="还出">
+            </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">标题</label>
+        <div class="layui-input-block" style="width: 75%">
+            <input type="hidden" name="id">
+                <input type="text" name="title" id="title" required  lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">日期</label>
+        <div class="layui-input-block" style="width: 75%">
+            <input type="text"  name="billtime" required  lay-verify="required" placeholder="请选择日期" class="layui-input billtime">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">金额</label>
+        <div class="layui-input-block" style="width: 75%">
+            <input type="text" name="price" required  lay-verify="required" placeholder="请输入金额" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">说明</label>
+        <div class="layui-input-block" style="width: 75%">
+            <textarea name="explain" placeholder="请输入内容" class="layui-textarea"></textarea>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <div class="layui-input-block" style="text-align: center">
+            <button class="layui-btn" onclick="saveBill()">保存</button>
+            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            <button class="layui-btn layui-btn-primary" onclick="closeWindow()">返回</button>
+        </div>
+    </div>
+    </form>
+</div>
+<!--添加账单结束-->
+</body>
+<script>
+    //模糊查询
+    $("#doSearch").click(function(){
+        //得到表单数据
+        var params=$("#dataForm").serialize();
+        window.location.href="queryAllBill?"+params
+    });
+    //layui弹出层
+    $("#addBill").click(function () {
+        layui.use("layer",function () {
+            layer.open({
+                type: 1,
+                content: $("#billTable"),
+                title: "记账",
+                area: ["800px","600px"]
+            })
+        })
+    })
+    //关闭
+    function closeWindow(){
+        var index = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(index);
+    }
+
+    //日期选择器
+    layui.use('laydate', function(){
+        var laydate = layui.laydate;
+        $(".billtime").each(function () {
+            laydate.render({
+                elem: this
+            });
+        })
+    });
+    //渲染表单单选框
+    layui.use('form', function(){
+        var form = layui.form;
+        form.render('radio');
+    });
+
+    //异步提交表单
+    function saveBill() {
+        //获取表单数据
+        var formData = $("#billForm").serialize();
+        $.ajax({
+            type: 'POST',
+            data: formData,
+            url: "bill/addBill",
+            dataType: 'text',
+            success: function (data) {
+                if(data){
+                    layui.use('layer',function () {
+                        layer.confirm('保存成功,是否继续记账？',{
+                            btn:['确定','取消'],
+                            btnAlign:'c', //居中
+                            yes:function(index,layero){
+                               layer.close(index)
+                            },
+                            btn2:function(index, layero){
+                                //得到当前iframe层的索引
+                                var index = parent.layer.getFrameIndex(window.name);
+                                //关闭弹出层
+                                parent.layer.close(index);
+                            }
+                        });
+                    })
+                }
+            },
+            complete:function (xhr,textStatus) {
+                //请求页面
+                parent.location.href="queryAllBill"
+            }
+        })
+    }
+
+</script>
+</html>
